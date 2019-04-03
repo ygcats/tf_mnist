@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import random as rn
 import time
+from model.mlp import mlp_3_layers
 
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('logdir', './logs/', 'output directory for log files')
@@ -15,18 +16,6 @@ tf.flags.DEFINE_float('momentum', 0.9, 'μ in momentum SGD')
 tf.flags.DEFINE_float('l2_lambda', 0.0005, 'l2-regularization')
 tf.flags.DEFINE_integer('hidden_units', 512, 'the number of units in hidden layers')
 tf.flags.DEFINE_integer('random_seed', 0, 'random seed')
-
-
-def mlp_3_layers(input, hidden_nodes, output_nodes, l2_lambda, is_training):
-    init = tf.initializers.he_normal()
-    reg = tf.contrib.layers.l2_regularizer(scale=l2_lambda)
-
-    input_ = tf.layers.flatten(input)
-    h = tf.layers.dense(input_, hidden_nodes, kernel_initializer=init, kernel_regularizer=reg, name='fc1')
-    h_n = tf.layers.batch_normalization(h, momentum=0.9, epsilon=0.0001, axis=1, training=is_training, name='bn1')
-    h_n_a = tf.nn.relu(h_n, name='relu1')
-    output = tf.layers.dense(h_n_a, output_nodes, kernel_initializer=init, kernel_regularizer=reg, name='fc2')
-    return output
 
 
 def compute_loss_acc(tf_sess, loss_name, confmat_name, input_name, target_name, is_training_name, x_input, y_target, batch):
