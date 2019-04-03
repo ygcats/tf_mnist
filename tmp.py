@@ -114,15 +114,15 @@ def main(argv):
                 with tf.control_dependencies(update_ops):
                     train_step = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=momentum).minimize(objective, global_step=global_step)
                     # train_step = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(objective, global_step=global_step)
-            with tf.variable_scope('model/fc1', reuse=True):
-                l2_W1 = tf.norm(tf.get_variable('kernel'), ord='euclidean', axis=0, name='l2_W1')
+            #with tf.variable_scope('model/fc1', reuse=True):
+                #l2_W1 = tf.norm(tf.get_variable('kernel'), ord='euclidean', axis=0, name='l2_W1')
         with tf.device('/cpu:0'):
             with tf.name_scope('acc'):
                 confusion_matrix = tf.confusion_matrix(tf.argmax(target, 1), tf.argmax(logit_output, 1), nr_labels, name='confusion_matrix')
     #session
     #print(MLP.get_operations())
     #loss_iter_summary = tf.summary.scalar('loss_iter', loss)
-    l2_W1_summary = tf.summary.histogram('l2_W1', l2_W1)
+    #l2_W1_summary = tf.summary.histogram('l2_W1', l2_W1)
     start = time.time()
     with tf.Session(graph=MLP, config=config) as sess:
         print(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
@@ -134,13 +134,13 @@ def main(argv):
         FileWriter_valid = tf.summary.FileWriter(log_dir + 'valid', sess.graph)
         sess.run(tf.global_variables_initializer())
 
-        w_init = sess.run('model/fc1/kernel:0')
-        print(w_init.shape)
+        #w_init = sess.run('model/fc1/kernel:0')
+        #print(w_init.shape)
         #for i in range(w_init.shape[0]):
         #print(1.0e-4 * 0.5 * np.sum(w_init**2, axis=1))
-        print(sess.run('model/fc1/kernel/Regularizer/l2_regularizer:0'))
-        #print(1.0e-4 * 0.5 * sess.run(tf.norm(w_init, ord='euclidean', axis=1))**2)
-        print(1.0e-4 * 0.5 * np.sum(sess.run(l2_W1)**2))
+        #print(sess.run('model/fc1/kernel/Regularizer/l2_regularizer:0'))
+        #print(1.0e-4 * 0.5 * np.sum(sess.run(tf.norm(w_init, ord='euclidean', axis=1))**2))
+        #print(1.0e-4 * 0.5 * np.sum(sess.run(l2_W1)**2))
 
         for i in range(epochs):
             rand_index = np.random.permutation(nr_training_samples)
@@ -154,7 +154,7 @@ def main(argv):
                 #loss_iter, _ = sess.run([loss_iter_summary, train_step], feed_dict={input: x, target: y, is_training: True})
                 #FileWriter_train.add_summary(loss_iter, i * nr_iterations_per_epoch + j)
 
-            FileWriter_train.add_summary(sess.run(l2_W1_summary), i + 1)
+            #FileWriter_train.add_summary(sess.run(l2_W1_summary), i + 1)
 
             # evaluation on training set
             loss_acc_train = compute_loss_acc(sess, 'loss/cross_entropy:0', 'acc/confusion_matrix/SparseTensorDenseAdd:0', 'data/input:0', 'data/label:0', 'data/is_training:0', x_train, y_train_one_hot, 1000)
