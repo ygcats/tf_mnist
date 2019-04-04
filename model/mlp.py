@@ -1,13 +1,15 @@
 import tensorflow as tf
+import model.layers as L
 
 
-def mlp_3_layers(input, hidden_nodes, output_nodes, l2_lambda, is_training):
+def one_hidden(input, nr_out_nodes, is_training):
+    #kernel initializer and regularizer
     init = tf.initializers.he_normal()
-    reg = tf.contrib.layers.l2_regularizer(scale=l2_lambda)
+    reg = tf.contrib.layers.l2_regularizer(scale=1.0)
 
-    input_ = tf.layers.flatten(input)
-    h = tf.layers.dense(input_, hidden_nodes, kernel_initializer=init, kernel_regularizer=reg, name='fc1')
-    h_n = tf.layers.batch_normalization(h, momentum=0.9, epsilon=0.0001, axis=1, training=is_training, name='bn1')
-    h_n_a = tf.nn.relu(h_n, name='relu1')
-    output = tf.layers.dense(h_n_a, output_nodes, kernel_initializer=init, kernel_regularizer=reg, name='fc2')
-    return output
+    h = tf.layers.flatten(input)
+    h = L.fc_bn_relu(h, 512, kernel_init=init, kernel_reg=reg, bn_is_training=is_training, name='FBR1')
+
+    h = tf.layers.dropout(h, rate=0.5, training=is_training, name='drp1')
+    h = tf.layers.dense(h, nr_out_nodes, kernel_initializer=init, kernel_regularizer=reg, name='fc_last')
+    return h

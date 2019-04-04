@@ -2,7 +2,8 @@ import tensorflow as tf
 import numpy as np
 import random as rn
 import time
-from model.mlp import mlp_3_layers
+import model.mlp as mlp
+import model.cnn as cnn
 
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('logdir', './logs/', 'output directory for log files')
@@ -14,7 +15,6 @@ tf.flags.DEFINE_integer('step_lr_decay_epochs', 25, 'step learning rate decay is
 tf.flags.DEFINE_float('step_lr_decay_rate', 0.5, 'step learning rate decay is applied with this rate')
 tf.flags.DEFINE_float('momentum', 0.9, 'μ in momentum SGD')
 tf.flags.DEFINE_float('l2_lambda', 0.0005, 'l2-regularization')
-tf.flags.DEFINE_integer('hidden_units', 512, 'the number of units in hidden layers')
 tf.flags.DEFINE_integer('random_seed', 0, 'random seed')
 
 
@@ -53,7 +53,6 @@ def main(argv):
     lr_decay_rate = FLAGS.step_lr_decay_rate
     momentum = FLAGS.momentum
     l2_lambda = FLAGS.l2_lambda
-    nr_hidden_nodes = FLAGS.hidden_units
     config = tf.ConfigProto(
         gpu_options=tf.GPUOptions(
             visible_device_list=str(FLAGS.device),  # specify GPU number
@@ -70,9 +69,13 @@ def main(argv):
     mnist = tf.keras.datasets.mnist
     (x_train, y_train),(x_test, y_test) = mnist.load_data()
     x_train, x_test = x_train.astype('float32') / 255.0, x_test.astype('float32') / 255.0
-    x_train = np.squeeze(np.array([[x.flatten()] for x in x_train]))
-    x_test = np.squeeze(np.array([[x.flatten()] for x in x_test]))
-    nr_input_nodes = x_train.shape[1]
+    #x_train = np.squeeze(np.array([[x.flatten()] for x in x_train]))
+    #x_test = np.squeeze(np.array([[x.flatten()] for x in x_test]))
+    x_train = x_train[:, np.newaxis, :, :]
+    x_test = x_test[:, np.newaxis, :, :]
+    print(x_train.shape)
+    print(x_test.shape)
+
     nr_labels = len(np.unique(y_train))
     nr_training_samples, nr_test_samples = x_train.shape[0], x_test.shape[0]
     nr_iterations_per_epoch = np.ceil(nr_training_samples / batch_size).astype('int32')
@@ -86,17 +89,18 @@ def main(argv):
         with tf.device('/cpu:0'):
             global_step = tf.Variable(0, trainable=False, name='global_step')
         with tf.device('/gpu:0'):
-            tf.set_random_seed(0)
+            tf.set_random_seed(FLAGS.random_seed)
             with tf.variable_scope('data'):
-                input = tf.placeholder(shape=[None, nr_input_nodes], dtype=tf.float32, name='input')
+                input = tf.placeholder(shape=[None, x_train.shape[1], x_train.shape[2], x_train.shape[3]], dtype=tf.float32, name='input')
                 target = tf.placeholder(shape=[None, nr_labels], dtype=tf.float32, name='label')
                 is_training = tf.placeholder(dtype=tf.bool, name='is_training')
             with tf.variable_scope('model'):
-                logit_output = mlp_3_layers(input, nr_hidden_nodes, nr_labels, l2_lambda, is_training)
+                #logit_output = mlp.one_hidden(input, nr_labels, is_training)
+                logit_output = cnn.two_conv_one_fc(input, nr_labels, is_training)
             with tf.name_scope('loss'):
                 loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=logit_output, labels=target), name='cross_entropy')
                 regularization = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES), name='regularization')
-                objective = loss + regularization
+                objective = loss + l2_lambda * regularization
             with tf.name_scope('update'):
                 learning_rate = tf.train.exponential_decay(init_lr, global_step, lr_decay_epochs * nr_iterations_per_epoch, lr_decay_rate, staircase=True)
                 update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
