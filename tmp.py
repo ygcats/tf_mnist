@@ -5,6 +5,7 @@ import time
 import model.mlp as mlp
 import model.cnn as cnn
 
+
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('logdir', './logs/', 'output directory for log files')
 tf.flags.DEFINE_integer('device', 0, 'gpu_id')
