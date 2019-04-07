@@ -1,0 +1,4 @@
+# ignore a folder
+train/
+test/
+__pycache__/
